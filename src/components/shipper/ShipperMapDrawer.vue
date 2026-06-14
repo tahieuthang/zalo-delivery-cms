@@ -1,7 +1,7 @@
 <template>
   <el-drawer
     v-model="drawerVisible"
-    :title="`Vị trí tài xế: ${shipper?.name || ''}`"
+    :title="`Vị trí tài xế: ${parseShipperName(shipper?.name).name || ''}`"
     size="50%"
     direction="rtl"
     destroy-on-close
@@ -41,7 +41,7 @@
             </l-icon>
             <l-popup>
               <div class="popup-content">
-                <strong>🛵 {{ shipper?.name }}</strong>
+                <strong>🛵 {{ parseShipperName(shipper?.name).name }}</strong>
                 <p>Số điện thoại: {{ shipper?.phone }}</p>
                 <p>Trạng thái: <span class="status-text">{{ shipper?.status }}</span></p>
                 <p class="coords-text">Tọa độ: {{ lat.toFixed(5) }}, {{ lng.toFixed(5) }}</p>
@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import { shipperApi } from '@/api/shipperApi'
-import { getVehicleLabel, formatCurrency } from '@/utils/helpers'
+import { getVehicleLabel, formatCurrency, parseShipperName } from '@/utils/helpers'
 import type { Shipper } from '@/types'
 
 // Lazy import Leaflet

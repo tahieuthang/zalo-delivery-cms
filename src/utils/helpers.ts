@@ -77,3 +77,19 @@ export function getVehicleLabel(type: string): string {
   }
   return labels[type] || type
 }
+
+/** Parse shipper name to extract name and location from format "Name (Location)" */
+export function parseShipperName(fullName: string | undefined): { name: string; location: string } {
+  if (!fullName) return { name: '', location: '' }
+  const match = fullName.match(/^([^(]+)\s*\(([^)]+)\)$/)
+  if (match) {
+    return {
+      name: match[1].trim(),
+      location: match[2].trim(),
+    }
+  }
+  return {
+    name: fullName.trim(),
+    location: '',
+  }
+}

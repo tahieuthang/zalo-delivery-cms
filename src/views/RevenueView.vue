@@ -46,19 +46,99 @@
       <v-chart :option="chartOption" autoresize style="height: 350px" />
     </div>
 
-    <!-- Daily Table -->
-    <div class="glass-card table-section">
-      <h3 class="section-title">Chi tiết theo ngày</h3>
-      <el-table :data="dailyData" style="width: 100%" size="small">
-        <el-table-column prop="date" label="Ngày" width="140" />
-        <el-table-column prop="orderCount" label="Số đơn" width="120" align="center" />
-        <el-table-column prop="totalRevenue" label="Doanh thu" align="right">
-          <template #default="{ row }">
-            <span class="revenue-amount">{{ formatCurrency(row.totalRevenue) }}</span>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- Bottom Section: Daily Table + Right Widgets -->
+    <div class="bottom-grid">
+      <!-- Left: Daily Table -->
+      <div class="glass-card table-section">
+        <h3 class="section-title">Chi tiết theo ngày</h3>
+        <el-table :data="dailyData" style="width: 100%" size="small">
+          <el-table-column prop="date" label="Ngày" width="140" />
+          <el-table-column prop="orderCount" label="Số đơn" width="120" align="center" />
+          <el-table-column prop="totalRevenue" label="Doanh thu" align="right">
+            <template #default="{ row }">
+              <span class="revenue-amount">{{ formatCurrency(row.totalRevenue) }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- Right: Lag Card + Shipper Earnings Card -->
+      <div class="right-widgets">
+        <!-- Lag Card -->
+        <div class="glass-card lag-card" v-loading="lagLoading">
+          <div class="card-header-with-action">
+            <h3 class="section-title">⚙️ Consumer Lag (order.completed)</h3>
+            <el-button link type="primary" size="small" @click="fetchLag">Làm mới</el-button>
+          </div>
+
+          <div v-if="lagPartitions.length" class="lag-list">
+            <div v-for="part in lagPartitions" :key="part.partition" class="lag-item">
+              <div class="part-name">Partition {{ part.partition }}</div>
+              <div class="offsets">
+                <span>Offset: {{ part.currentOffset }} / {{ part.logEndOffset }}</span>
+              </div>
+              <span class="lag-badge" :class="getLagClass(part.lag)">
+                Lag: {{ part.lag }}
+              </span>
+            </div>
+          </div>
+          <div v-else class="no-data-text">
+            Không có dữ liệu lag hoặc kết nối Kafka lỗi.
+          </div>
+        </div>
+
+        <!-- Shipper Earnings Selector Card -->
+        <div class="glass-card shipper-earnings-card">
+          <h3 class="section-title">💰 Tra cứu Thu nhập Shipper</h3>
+          <div class="selector-wrap">
+            <el-select
+              v-model="selectedShipperId"
+              placeholder="Chọn tài xế..."
+              filterable
+              style="width: 100%"
+              @change="handleShipperSelect"
+            >
+              <el-option
+                v-for="shipper in shippers"
+                :key="shipper.id"
+                :label="`${parseShipperName(shipper.name).name} (${shipper.phone})`"
+                :value="shipper.id"
+              />
+            </el-select>
+          </div>
+
+          <div v-if="selectedShipper" class="shipper-preview-info">
+            <div class="info-row">
+              <span class="label">Tên tài xế:</span>
+              <span class="value">{{ parseShipperName(selectedShipper.name).name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Phương tiện:</span>
+              <span class="value">{{ getVehicleLabel(selectedShipper.vehicleType) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Tổng thu nhập:</span>
+              <span class="value earnings">{{ formatCurrency(selectedShipper.totalEarnings) }}</span>
+            </div>
+
+            <el-button type="success" size="small" style="width: 100%; margin-top: 8px;" @click="showRevenueDrawer = true">
+              Xem lịch sử giao dịch
+            </el-button>
+          </div>
+          <div v-else class="no-data-text">
+            Vui lòng chọn tài xế để xem thông tin chi tiết.
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Shipper Detail & Revenue Drawer -->
+    <ShipperDetailDrawer
+      v-model:visible="showRevenueDrawer"
+      :shipper="selectedShipper"
+      initial-tab="revenue"
+      @saved="fetchShippers"
+    />
   </div>
 </template>
 
@@ -70,14 +150,42 @@ import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import { revenueApi } from '@/api/revenueApi'
-import { formatCurrency } from '@/utils/helpers'
-import type { RevenueSummary, DailyRevenue } from '@/types'
+import { shipperApi } from '@/api/shipperApi'
+import { formatCurrency, getVehicleLabel, parseShipperName } from '@/utils/helpers'
+import ShipperDetailDrawer from '@/components/shipper/ShipperDetailDrawer.vue'
+import type { RevenueSummary, DailyRevenue, Shipper } from '@/types'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
 const summary = ref<RevenueSummary | null>(null)
 const dailyData = ref<DailyRevenue[]>([])
 const dateRange = ref<[string, string] | null>(null)
+
+// Kafka Consumer Lag Refs & Computeds
+interface LagPartition {
+  partition: number
+  currentOffset: string | number
+  logEndOffset: string | number
+  lag: string | number
+}
+
+interface LagData {
+  topic: string
+  partitions: LagPartition[]
+}
+
+const lagData = ref<LagData | null>(null)
+const lagLoading = ref(false)
+
+const lagPartitions = computed(() => {
+  return lagData.value?.partitions || []
+})
+
+// Shipper Earnings Refs
+const shippers = ref<Shipper[]>([])
+const selectedShipperId = ref<string | null>(null)
+const selectedShipper = ref<Shipper | null>(null)
+const showRevenueDrawer = ref(false)
 
 const avgOrderValue = computed(() => {
   if (!summary.value || !summary.value.totalOrders) return '—'
@@ -139,9 +247,45 @@ async function fetchDaily() {
   } catch { /* silent */ }
 }
 
+async function fetchLag() {
+  lagLoading.value = true
+  try {
+    const res = await revenueApi.getLag()
+    lagData.value = res.data as any
+  } catch (err) {
+    console.error('Lỗi khi lấy lag Revenue:', err)
+  } finally {
+    lagLoading.value = false
+  }
+}
+
+async function fetchShippers() {
+  try {
+    const res = await shipperApi.getShippers()
+    const data = res.data as any
+    shippers.value = data?.data || data || []
+  } catch (err) {
+    console.error('Lỗi khi lấy danh sách shipper:', err)
+  }
+}
+
+function handleShipperSelect(val: string) {
+  const found = shippers.value.find((s) => s.id === val)
+  selectedShipper.value = found || null
+}
+
+function getLagClass(lagVal: string | number) {
+  const num = typeof lagVal === 'string' ? parseInt(lagVal, 10) : lagVal
+  if (isNaN(num) || num === 0) return 'lag-zero'
+  if (num < 5) return 'lag-low'
+  return 'lag-high'
+}
+
 onMounted(() => {
   fetchSummary()
   fetchDaily()
+  fetchLag()
+  fetchShippers()
 })
 </script>
 
@@ -198,8 +342,33 @@ onMounted(() => {
   margin-top: 2px;
 }
 
-.chart-section, .table-section {
+.chart-section {
   padding: 24px;
+}
+
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+}
+
+.table-section {
+  padding: 24px;
+}
+
+.right-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lag-card, .shipper-earnings-card {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
 }
 
 .chart-header {

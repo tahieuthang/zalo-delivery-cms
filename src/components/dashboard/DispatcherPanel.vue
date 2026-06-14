@@ -142,7 +142,7 @@
                     <el-option
                       v-for="shipper in activeShippers"
                       :key="shipper.id"
-                      :label="shipper.name"
+                      :label="parseShipperName(shipper.name).name"
                       :value="shipper.id"
                     />
                   </el-select>
@@ -179,7 +179,7 @@ import { Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { dispatcherApi } from '@/api/dispatcherApi'
 import { shipperApi } from '@/api/shipperApi'
-import { getStatusLabel } from '@/utils/helpers'
+import { getStatusLabel, parseShipperName } from '@/utils/helpers'
 import type { DispatcherStatus, DispatcherLag, Order, Shipper } from '@/types'
 
 const props = defineProps<{
@@ -240,7 +240,10 @@ async function fetchDispatcherData() {
     ])
     if (statusRes.status === 'fulfilled') status.value = statusRes.value.data as any
     if (lagRes.status === 'fulfilled') lag.value = lagRes.value.data as any
-    if (shippersRes.status === 'fulfilled') activeShippers.value = (shippersRes.value.data as any) || []
+    if (shippersRes.status === 'fulfilled') {
+      const data = shippersRes.value.data as any
+      activeShippers.value = data?.data || data || []
+    }
   } catch (e) {
     console.error('Fetch dispatcher statistics failed', e)
   } finally {

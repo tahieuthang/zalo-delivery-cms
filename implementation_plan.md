@@ -60,7 +60,7 @@ Hệ thống hiện tại đã được thiết lập khung sườn vững chắ
 
 Để đưa hệ thống lên chuẩn vận hành chuyên nghiệp (Production-ready), chúng ta cần bổ sung các tính năng nâng cao sau:
 
-### Phase 1: Vận hành Hệ thống & Trực quan hóa Vận hành (Dispatcher Panel)
+### Phase 1: Vận hành Hệ thống & Trực quan hóa Vận hành (Dispatcher Panel) — ✅ Đã hoàn thành
 *Mục tiêu: Cho phép Operator giám sát Kafka Dispatcher và can thiệp thủ công (Trigger dispatch, Mô phỏng Shipper).*
 
 - **Bước 1.1: Tích hợp thông số Kafka & Lag lên Dashboard**
@@ -73,7 +73,7 @@ Hệ thống hiện tại đã được thiết lập khung sườn vững chắ
     - Mô phỏng phản hồi của Shipper (Chấp nhận/Từ chối Offer) phục vụ testing và sửa lỗi vận hành nhanh (Gọi API POST `/api/dispatcher/respond`).
   - *File cần sửa*: `src/views/DashboardView.vue` hoặc tạo mới `src/components/dashboard/DispatcherPanel.vue`.
 
-### Phase 2: Nâng cấp Giám sát Shipper (Shipper Advanced Features)
+### Phase 2: Nâng cấp Giám sát Shipper (Shipper Advanced Features) — ✅ Đã hoàn thành
 *Mục tiêu: Quản lý trạng thái và vị trí địa lý của Shipper thời gian thực ngoài phạm vi đơn hàng.*
 
 - **Bước 2.1: Tích hợp Live Map vào trang Quản lý Shipper**
@@ -85,7 +85,7 @@ Hệ thống hiện tại đã được thiết lập khung sườn vững chắ
   - Gọi API `PATCH /api/shippers/{id}/status`.
   - *File cần sửa*: `src/views/ShipperListView.vue`.
 
-### Phase 3: Hoàn thiện Realtime Notifications & Polling
+### Phase 3: Hoàn thiện Realtime Notifications & Polling — ✅ Đã hoàn thành
 *Mục tiêu: Đảm bảo CMS cập nhật thông tin đơn hàng mới liên tục mà không cần F5.*
 
 - **Bước 3.1: Viết Background Polling Service trong Notification Store**
@@ -94,7 +94,7 @@ Hệ thống hiện tại đã được thiết lập khung sườn vững chắ
   - Nếu có đơn hàng mới xuất hiện mà CMS chưa biết, tạo một thông báo hệ thống và phát âm thanh cảnh báo.
   - *File cần sửa*: `src/stores/notificationStore.ts`.
 
-### Phase 4: Đồng bộ Doanh thu & Báo cáo Lag
+### Phase 4: Đồng bộ Doanh thu & Báo cáo Lag — ✅ Đã hoàn thành
 *Mục tiêu: Hiển thị chi tiết lag của Consumer dịch vụ Revenue để giám sát hiệu năng xử lý.*
 
 - **Bước 4.1: Tích hợp Revenue Consumer Lag**
@@ -117,10 +117,10 @@ Dưới đây là sơ đồ chi tiết các API endpoints được tích hợp v
 | **Dashboard** | `/api/dashboard/summary` | `GET` | Tổng quan số lượng đơn, shipper online, doanh thu | ✅ Đã tích hợp |
 | | `/api/revenue/daily` | `GET` | Biểu đồ doanh thu 7 ngày qua | ✅ Đã tích hợp |
 | | `/api/orders?limit=5` | `GET` | Bảng đơn hàng gần đây | ✅ Đã tích hợp |
-| | `/api/dispatcher/status` | `GET` | Trạng thái Kafka Dispatcher Consumer | ⏳ Chưa tích hợp (Phase 1) |
-| | `/api/dispatcher/lag` | `GET` | Độ trễ (lag) của Dispatcher | ⏳ Chưa tích hợp (Phase 1) |
-| | `/api/dispatcher/trigger` | `POST` | Kích hoạt điều phối thủ công đơn hàng | ⏳ Chưa tích hợp (Phase 1) |
-| | `/api/dispatcher/respond` | `POST` | Mô phỏng Shipper đồng ý/từ chối đơn | ⏳ Chưa tích hợp (Phase 1) |
+| | `/api/dispatcher/status` | `GET` | Trạng thái Kafka Dispatcher Consumer | ✅ Đã tích hợp |
+| | `/api/dispatcher/lag` | `GET` | Độ trễ (lag) của Dispatcher | ✅ Đã tích hợp |
+| | `/api/dispatcher/trigger` | `POST` | Kích hoạt điều phối thủ công đơn hàng | ✅ Đã tích hợp |
+| | `/api/dispatcher/respond` | `POST` | Mô phỏng Shipper đồng ý/từ chối đơn | ✅ Đã tích hợp |
 | **Đơn hàng (Orders)** | `/api/orders` | `GET` | Danh sách đơn hàng kèm bộ lọc và phân trang | ✅ Đã tích hợp |
 | | `/api/orders/{id}` | `GET` | Chi tiết đơn, bao gồm shipper, offerLogs, revenues | ✅ Đã tích hợp |
 | | `/api/orders/{id}/tracking` | `GET` | Vị trí realtime của shipper đang giao | ✅ Đã tích hợp |
@@ -129,9 +129,9 @@ Dưới đây là sơ đồ chi tiết các API endpoints được tích hợp v
 | | `/api/shippers` | `POST` | Thêm mới shipper | ✅ Đã tích hợp |
 | | `/api/shippers/{id}` | `PUT` | Cập nhật thông tin shipper | ✅ Đã tích hợp |
 | | `/api/shippers/{id}` | `DELETE`| Xóa shipper | ✅ Đã tích hợp |
-| | `/api/shippers/{id}/status` | `PATCH` | Bật/Tắt chế độ ONLINE cho Shipper | ⏳ Chưa tích hợp (Phase 2) |
-| | `/api/shippers/{id}/location` | `GET` | Lấy tọa độ GPS hiện tại từ Redis Geo | ⏳ Chưa tích hợp (Phase 2) |
+| | `/api/shippers/{id}/status` | `PATCH` | Bật/Tắt chế độ ONLINE cho Shipper | ✅ Đã tích hợp |
+| | `/api/shippers/{id}/location` | `GET` | Lấy tọa độ GPS hiện tại từ Redis Geo | ✅ Đã tích hợp |
 | **Doanh thu (Revenue)** | `/api/revenue/summary` | `GET` | Thống kê tổng quan doanh thu toàn hệ thống | ✅ Đã tích hợp |
 | | `/api/revenue/daily` | `GET` | Chi tiết doanh thu theo khoảng thời gian | ✅ Đã tích hợp |
-| | `/api/revenue/lag` | `GET` | Độ trễ (lag) của Consumer dịch vụ Revenue | ⏳ Chưa tích hợp (Phase 4) |
-| | `/api/revenue/shipper/{id}`| `GET` | Thu nhập và lịch sử giao hàng của Shipper | ⏳ Chưa tích hợp (Phase 4) |
+| | `/api/revenue/lag` | `GET` | Độ trễ (lag) của Consumer dịch vụ Revenue | ✅ Đã tích hợp |
+| | `/api/revenue/shipper/{id}`| `GET` | Thu nhập và lịch sử giao hàng của Shipper | ✅ Đã tích hợp |

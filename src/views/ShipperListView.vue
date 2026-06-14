@@ -2,14 +2,23 @@
   <div class="shipper-view">
     <div class="page-header">
       <h2>Quản lý Shipper</h2>
-      <el-button type="primary" @click="showCreate = true">
+      <el-button type="primary" @click="addNewShipper">
         <el-icon><Plus /></el-icon> Thêm Shipper
       </el-button>
     </div>
 
     <div class="glass-card table-card">
       <el-table :data="shippers" v-loading="loading" style="width: 100%">
-        <el-table-column prop="name" label="Tên" min-width="150" />
+        <el-table-column label="Tên" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ parseShipperName(row.name).name }}
+          </template>
+        </el-table-column>
+        <el-table-column label="Vị trí ban đầu" min-width="220" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ parseShipperName(row.name).location || '—' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="phone" label="SĐT" width="140" />
         <el-table-column prop="vehicleType" label="Phương tiện" width="140">
           <template #default="{ row }">
@@ -34,6 +43,20 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column label="Vị trí" width="100" align="center">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status !== 'OFFLINE'"
+              link
+              type="success"
+              @click="viewShipperLocation(row)"
+              title="Xem vị trí trên bản đồ"
+            >
+              <el-icon :size="18"><Location /></el-icon>
+            </el-button>
+            <span v-else class="text-muted">Offline</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="totalEarnings" label="Thu nhập" width="150" align="right">
           <template #default="{ row }">
             <span class="earnings">{{ formatCurrency(row.totalEarnings) }}</span>
@@ -44,88 +67,70 @@
             <span class="text-muted">{{ formatDate(row.createdAt) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="Hành động" width="220" fixed="right">
+        <el-table-column label="Hành động" width="120" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="editShipper(row)">Sửa</el-button>
-            <el-button
-              v-if="row.status !== 'OFFLINE'"
-              link
-              type="success"
-              @click="viewShipperLocation(row)"
-            >
-              📍 Vị trí
-            </el-button>
-            <el-button link type="danger" @click="deleteShipper(row)">Xóa</el-button>
+            <el-tooltip content="Xem chi tiết & Chỉnh sửa" placement="top">
+              <el-button
+                link
+                type="primary"
+                @click="openDetailDrawer(row)"
+              >
+                <el-icon :size="18"><View /></el-icon>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="Xóa" placement="top">
+              <el-button
+                link
+                type="danger"
+                @click="deleteShipper(row)"
+              >
+                <el-icon :size="18"><Delete /></el-icon>
+              </el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
     </div>
-
-    <!-- Create/Edit Dialog -->
-    <el-dialog
-      v-model="showCreate"
-      :title="editingShipper ? 'Sửa Shipper' : 'Thêm Shipper'"
-      width="480px"
-    >
-      <el-form :model="form" label-position="top">
-        <el-form-item label="Tên">
-          <el-input v-model="form.name" placeholder="Nhập tên shipper" />
-        </el-form-item>
-        <el-form-item label="Số điện thoại">
-          <el-input v-model="form.phone" placeholder="09xxxxxxxx" />
-        </el-form-item>
-        <el-form-item label="Phương tiện">
-          <el-select v-model="form.vehicleType" style="width: 100%">
-            <el-option label="🚲 Xe đạp" value="BIKE" />
-            <el-option label="🏍️ Xe máy" value="MOTORCYCLE" />
-            <el-option label="🚛 Xe tải" value="TRUCK" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showCreate = false">Hủy</el-button>
-        <el-button type="primary" @click="handleSave" :loading="saving">Lưu</el-button>
-      </template>
-    </el-dialog>
 
     <!-- Shipper Map Location Drawer -->
     <ShipperMapDrawer
       v-model:visible="showMapDrawer"
       :shipper="selectedShipper"
     />
+
+    <!-- Shipper Detail & Revenue Drawer -->
+    <ShipperDetailDrawer
+      v-model:visible="showDetailDrawer"
+      :shipper="selectedShipper"
+      @saved="fetchShippers"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { ref, onMounted } from 'vue'
+import { Plus, View, Delete, Location } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { shipperApi } from '@/api/shipperApi'
-import { getVehicleLabel, formatCurrency, formatDate } from '@/utils/helpers'
+import { getVehicleLabel, formatCurrency, formatDate, parseShipperName } from '@/utils/helpers'
 import ShipperMapDrawer from '@/components/shipper/ShipperMapDrawer.vue'
+import ShipperDetailDrawer from '@/components/shipper/ShipperDetailDrawer.vue'
 import type { Shipper } from '@/types'
 
 const shippers = ref<Shipper[]>([])
 const loading = ref(false)
-const saving = ref(false)
-const showCreate = ref(false)
-const editingShipper = ref<Shipper | null>(null)
 
 const togglingId = ref<string | null>(null)
 const showMapDrawer = ref(false)
+const showDetailDrawer = ref(false)
 const selectedShipper = ref<Shipper | null>(null)
-
-const form = reactive({
-  name: '',
-  phone: '',
-  vehicleType: 'MOTORCYCLE' as string,
-})
 
 async function fetchShippers() {
   loading.value = true
   try {
     const res = await shipperApi.getShippers()
-    shippers.value = (res.data as any) || []
+    const data = res.data as any
+    shippers.value = data?.data || data || []
   } catch (e) {
     console.error(e)
   } finally {
@@ -133,42 +138,22 @@ async function fetchShippers() {
   }
 }
 
-function editShipper(shipper: Shipper) {
-  editingShipper.value = shipper
-  form.name = shipper.name
-  form.phone = shipper.phone
-  form.vehicleType = shipper.vehicleType
-  showCreate.value = true
+function addNewShipper() {
+  selectedShipper.value = null
+  showDetailDrawer.value = true
 }
 
-async function handleSave() {
-  saving.value = true
-  try {
-    if (editingShipper.value) {
-      await shipperApi.updateShipper(editingShipper.value.id, form)
-      ElMessage.success('Cập nhật thành công')
-    } else {
-      await shipperApi.createShipper({ name: form.name, phone: form.phone, vehicleType: form.vehicleType as any })
-      ElMessage.success('Tạo shipper thành công')
-    }
-    showCreate.value = false
-    editingShipper.value = null
-    form.name = ''
-    form.phone = ''
-    form.vehicleType = 'MOTORCYCLE'
-    fetchShippers()
-  } catch (e) {
-    console.error(e)
-  } finally {
-    saving.value = false
-  }
+function openDetailDrawer(shipper: Shipper) {
+  selectedShipper.value = shipper
+  showDetailDrawer.value = true
 }
 
 async function deleteShipper(shipper: Shipper) {
   try {
-    await ElMessageBox.confirm(`Xóa shipper "${shipper.name}"?`, 'Xác nhận', { type: 'warning' })
+    const displayName = parseShipperName(shipper.name).name
+    await ElMessageBox.confirm(`Xóa shipper "${displayName}"?`, 'Xác nhận', { type: 'warning' })
     await shipperApi.deleteShipper(shipper.id)
-    ElMessage.success('Đã xóa')
+    ElMessage.success('Đã xóa shipper thành công')
     fetchShippers()
   } catch { /* cancelled */ }
 }
@@ -177,12 +162,13 @@ async function handleStatusToggle(shipper: Shipper, active: boolean) {
   togglingId.value = shipper.id
   try {
     const newStatus = active ? 'ONLINE' : 'OFFLINE'
-    // Default mock coordinates for Hanoi THCS Tam Hiep center (adds slight jitter so each online shipper doesn't stack exactly on top of each other)
+    // Default mock coordinates for Hanoi THCS Tam Hiep center
     const lat = active ? 20.953503 + (Math.random() - 0.5) * 0.015 : undefined
     const lng = active ? 105.837839 + (Math.random() - 0.5) * 0.015 : undefined
 
     await shipperApi.toggleStatus(shipper.id, newStatus, lat, lng)
-    ElMessage.success(`Đã chuyển trạng thái shipper ${shipper.name} sang ${newStatus}`)
+    const displayName = parseShipperName(shipper.name).name
+    ElMessage.success(`Đã chuyển trạng thái shipper ${displayName} sang ${newStatus}`)
     fetchShippers()
   } catch (e) {
     console.error('Lỗi khi thay đổi trạng thái shipper:', e)
