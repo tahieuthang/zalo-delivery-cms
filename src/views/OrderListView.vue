@@ -1,5 +1,13 @@
 <template>
   <div class="order-list-view">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h2>Quản lý Đơn hàng</h2>
+      <el-button type="primary" @click="openCreateOrderDialog">
+        <el-icon><Plus /></el-icon> Tạo đơn hàng
+      </el-button>
+    </div>
+
     <!-- Filter Bar -->
     <div class="glass-card filter-bar">
       <div class="filter-row">
@@ -107,13 +115,65 @@
       v-model:visible="drawerVisible"
       :order-id="selectedOrderId"
     />
+
+    <!-- Create Order Dialog -->
+    <el-dialog
+      v-model="showCreateDialog"
+      title="Tạo đơn hàng thủ công"
+      width="520px"
+      destroy-on-close
+    >
+      <el-form
+        ref="createFormRef"
+        :model="createForm"
+        :rules="createFormRules"
+        label-position="top"
+      >
+        <el-form-item label="Địa chỉ lấy hàng (Shop)" prop="pickupAddress">
+          <el-input
+            v-model="createForm.pickupAddress"
+            placeholder="Nhập địa chỉ lấy hàng..."
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="Địa chỉ giao hàng (Khách hàng)" prop="deliveryAddress">
+          <el-input
+            v-model="createForm.deliveryAddress"
+            placeholder="Nhập địa chỉ giao hàng..."
+            clearable
+            type="textarea"
+            :rows="3"
+          />
+        </el-form-item>
+
+        <el-form-item label="Ghi chú đơn hàng" prop="note">
+          <el-input
+            v-model="createForm.note"
+            placeholder="Nhập ghi chú cho tài xế..."
+            clearable
+            type="textarea"
+            :rows="2"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showCreateDialog = false">Hủy</el-button>
+          <el-button type="primary" @click="handleCreateOrder" :loading="creatingOrder">
+            Tạo đơn hàng
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Search, View } from '@element-plus/icons-vue'
+import { Search, View, Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { orderApi } from '@/api/orderApi'
 import { getStatusLabel, getStatusClass, formatDate, truncateId } from '@/utils/helpers'
 import OrderDrawer from '@/components/order/OrderDrawer.vue'
@@ -147,6 +207,21 @@ const statusOptions = [
   { value: 'FAILED', label: 'Thất bại' },
   { value: 'NO_SHIPPER', label: 'Không tìm thấy shipper' },
 ]
+
+const showCreateDialog = ref(false)
+const creatingOrder = ref(false)
+const createFormRef = ref()
+
+const createForm = reactive({
+  pickupAddress: '',
+  deliveryAddress: '',
+  note: '',
+})
+
+const createFormRules = {
+  pickupAddress: [{ required: true, message: 'Vui lòng nhập địa chỉ lấy hàng', trigger: 'blur' }],
+  deliveryAddress: [{ required: true, message: 'Vui lòng nhập địa chỉ giao hàng', trigger: 'blur' }],
+}
 
 async function fetchOrders() {
   loading.value = true
@@ -186,6 +261,37 @@ function openDrawer(row: Order) {
   drawerVisible.value = true
 }
 
+function openCreateOrderDialog() {
+  createForm.pickupAddress = import.meta.env.VITE_DEFAULT_SHOP_NAME || 'Trường THCS Tam Hiệp, Huỳnh Cung, Thanh Trì, Hà Nội'
+  createForm.deliveryAddress = ''
+  createForm.note = ''
+  showCreateDialog.value = true
+}
+
+async function handleCreateOrder() {
+  if (!createFormRef.value) return
+  await createFormRef.value.validate(async (valid: boolean) => {
+    if (!valid) return
+    creatingOrder.value = true
+    try {
+      await orderApi.createOrder({
+        customerId: `guest_${Date.now()}`,
+        pickupAddress: createForm.pickupAddress,
+        deliveryAddress: createForm.deliveryAddress,
+        note: createForm.note || undefined,
+      })
+      ElMessage.success('Tạo đơn hàng thủ công thành công!')
+      showCreateDialog.value = false
+      fetchOrders()
+    } catch (e: any) {
+      console.error('Lỗi khi tạo đơn hàng:', e)
+      ElMessage.error(e.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng kiểm tra địa chỉ địa lý.')
+    } finally {
+      creatingOrder.value = false
+    }
+  })
+}
+
 // Check for viewOrder query param (from notification click)
 watch(() => route.query.viewOrder, (orderId) => {
   if (orderId && typeof orderId === 'string') {
@@ -204,6 +310,18 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .filter-bar {
