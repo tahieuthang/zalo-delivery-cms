@@ -448,9 +448,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--bg-input);
   border-radius: 8px;
-  border: 1px solid rgba(51, 65, 85, 0.4);
+  border: 1px solid var(--border-color);
 }
 
 .part-name {
