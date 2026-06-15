@@ -96,6 +96,7 @@ import { revenueApi } from '@/api/revenueApi'
 import { orderApi } from '@/api/orderApi'
 import { getStatusLabel, getStatusClass, formatCurrency, formatDate, truncateId } from '@/utils/helpers'
 import DispatcherPanel from '@/components/dashboard/DispatcherPanel.vue'
+import { useThemeStore } from '@/stores/themeStore'
 import type { DashboardSummary, DailyRevenue, Order } from '@/types'
 
 use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
@@ -103,6 +104,9 @@ use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, Legend
 const summary = ref<DashboardSummary | null>(null)
 const dailyRevenue = ref<DailyRevenue[]>([])
 const recentOrders = ref<Order[]>([])
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.theme === 'dark')
 
 const pendingCount = computed(() => {
   if (!summary.value) return '—'
@@ -123,14 +127,14 @@ const revenueChartOption = computed(() => ({
   xAxis: {
     type: 'category',
     data: safeDaily.value.map((d) => d.date),
-    axisLine: { lineStyle: { color: '#334155' } },
-    axisLabel: { color: '#94a3b8', fontSize: 11 },
+    axisLine: { lineStyle: { color: isDark.value ? '#334155' : '#e2e8f0' } },
+    axisLabel: { color: isDark.value ? '#94a3b8' : '#64748b', fontSize: 11 },
   },
   yAxis: {
     type: 'value',
     axisLine: { show: false },
-    splitLine: { lineStyle: { color: '#1e293b' } },
-    axisLabel: { color: '#94a3b8', fontSize: 11 },
+    splitLine: { lineStyle: { color: isDark.value ? '#1e293b' : '#e2e8f0' } },
+    axisLabel: { color: isDark.value ? '#94a3b8' : '#64748b', fontSize: 11 },
   },
   series: [
     {
@@ -171,8 +175,8 @@ const statusPieOption = computed(() => {
         radius: ['45%', '70%'],
         center: ['50%', '55%'],
         data,
-        label: { color: '#94a3b8', fontSize: 11 },
-        labelLine: { lineStyle: { color: '#475569' } },
+        label: { color: isDark.value ? '#94a3b8' : '#475569', fontSize: 11 },
+        labelLine: { lineStyle: { color: isDark.value ? '#475569' : '#cbd5e1' } },
         emphasis: {
           itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' },
         },

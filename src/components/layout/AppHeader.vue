@@ -4,6 +4,14 @@
       <h1 class="page-title">{{ pageTitle }}</h1>
     </div>
     <div class="header-right">
+      <!-- Theme Toggle -->
+      <div class="theme-toggle" @click="themeStore.toggleTheme" title="Chuyển chế độ tối/sáng">
+        <el-icon :size="20" class="theme-icon">
+          <Sunny v-if="themeStore.theme === 'light'" />
+          <Moon v-else />
+        </el-icon>
+      </div>
+
       <!-- Notification Bell -->
       <div class="notification-wrapper" @click="toggleNotifications">
         <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99" class="notif-badge">
@@ -54,13 +62,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Bell } from '@element-plus/icons-vue'
+import { Bell, Sunny, Moon } from '@element-plus/icons-vue'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { useThemeStore } from '@/stores/themeStore'
 import type { AppNotification } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const store = useNotificationStore()
+const themeStore = useThemeStore()
 const showDropdown = ref(false)
 
 const pageTitle = computed(() => {
@@ -266,5 +276,29 @@ onBeforeUnmount(() => {
   font-weight: 700;
   font-size: 14px;
   color: white;
+}
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-card-hover);
+}
+
+.theme-icon {
+  color: var(--text-secondary);
+  transition: color 0.2s, transform 0.4s ease;
+}
+
+.theme-toggle:hover .theme-icon {
+  color: var(--text-primary);
+  transform: rotate(25deg);
 }
 </style>

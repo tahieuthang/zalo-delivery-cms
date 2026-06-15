@@ -33,7 +33,39 @@
 
   --sidebar-width: 260px;
   --header-height: 64px;
+
+  /* Custom component tokens */
+  --el-table-header-bg: #1a2332;
+  --leaflet-bg: #1a2332;
+  --bg-glass: rgba(30, 41, 59, 0.8);
+  --bg-stat: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 0.6));
+  --border-stat: rgba(148, 163, 184, 0.1);
 }
+
+/* ─── Light Mode Overrides ─────────────────────────────────────────────────── */
+.light {
+  --bg-app: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #e2e8f0;
+  --bg-input: #f1f5f9;
+  --bg-header: rgba(248, 250, 252, 0.85);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --border-color: #cbd5e1;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.05);
+
+  --el-table-header-bg: #f1f5f9;
+  --leaflet-bg: #e2e8f0;
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-stat: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 249, 0.7));
+  --border-stat: var(--border-color);
+}
+
 
 /* ─── Base Styles ───────────────────────────────────────────────────────────── */
 * {
@@ -60,7 +92,7 @@ html, body {
 .el-table {
   --el-table-bg-color: var(--bg-card) !important;
   --el-table-tr-bg-color: var(--bg-card) !important;
-  --el-table-header-bg-color: #1a2332 !important;
+  --el-table-header-bg-color: var(--el-table-header-bg) !important;
   --el-table-header-text-color: var(--text-secondary) !important;
   --el-table-text-color: var(--text-primary) !important;
   --el-table-border-color: var(--border-color) !important;
@@ -205,7 +237,7 @@ html, body {
 
 /* ─── Utility Classes ───────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(30, 41, 59, 0.8);
+  background: var(--bg-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -213,9 +245,9 @@ html, body {
 }
 
 .stat-card {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 0.6));
+  background: var(--bg-stat);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-stat);
   border-radius: var(--border-radius);
   padding: 24px;
   transition: all 0.3s ease;
@@ -272,7 +304,7 @@ html, body {
 
 /* ─── Leaflet dark tiles fix ────────────────────────────────────────────────── */
 .leaflet-container {
-  background: #1a2332 !important;
+  background: var(--leaflet-bg) !important;
   border-radius: 8px;
 }
 

@@ -153,6 +153,7 @@ import { revenueApi } from '@/api/revenueApi'
 import { shipperApi } from '@/api/shipperApi'
 import { formatCurrency, getVehicleLabel, parseShipperName } from '@/utils/helpers'
 import ShipperDetailDrawer from '@/components/shipper/ShipperDetailDrawer.vue'
+import { useThemeStore } from '@/stores/themeStore'
 import type { RevenueSummary, DailyRevenue, Shipper } from '@/types'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
@@ -160,6 +161,9 @@ use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 const summary = ref<RevenueSummary | null>(null)
 const dailyData = ref<DailyRevenue[]>([])
 const dateRange = ref<[string, string] | null>(null)
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.theme === 'dark')
 
 // Kafka Consumer Lag Refs & Computeds
 interface LagPartition {
@@ -198,14 +202,14 @@ const chartOption = computed(() => ({
   xAxis: {
     type: 'category',
     data: dailyData.value.map((d) => d.date),
-    axisLine: { lineStyle: { color: '#334155' } },
-    axisLabel: { color: '#94a3b8', fontSize: 11 },
+    axisLine: { lineStyle: { color: isDark.value ? '#334155' : '#e2e8f0' } },
+    axisLabel: { color: isDark.value ? '#94a3b8' : '#64748b', fontSize: 11 },
   },
   yAxis: {
     type: 'value',
     axisLine: { show: false },
-    splitLine: { lineStyle: { color: '#1e293b' } },
-    axisLabel: { color: '#94a3b8', fontSize: 11 },
+    splitLine: { lineStyle: { color: isDark.value ? '#1e293b' : '#e2e8f0' } },
+    axisLabel: { color: isDark.value ? '#94a3b8' : '#64748b', fontSize: 11 },
   },
   series: [
     {
