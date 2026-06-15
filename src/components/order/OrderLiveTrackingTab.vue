@@ -13,15 +13,19 @@
           style="height: 100%; width: 100%; border-radius: 8px"
         >
           <l-tile-layer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            :url="mapTileUrl"
             attribution="&copy; CartoDB"
           />
 
           <!-- Shop Marker -->
           <l-marker v-if="shopLatLng" :lat-lng="shopLatLng">
-            <l-icon :icon-size="[36, 36]" :icon-anchor="[18, 36]">
+            <l-icon :icon-size="[36, 42]" :icon-anchor="[18, 41]">
               <template #default>
-                <div class="custom-marker shop-marker">🏪</div>
+                <div class="marker-container shop-marker">
+                  <div class="teardrop-pin" style="--pin-bg: #f59e0b;">
+                    <span class="pin-icon">🍽️</span>
+                  </div>
+                </div>
               </template>
             </l-icon>
             <l-popup>
@@ -34,9 +38,13 @@
 
           <!-- Customer Marker -->
           <l-marker v-if="customerLatLng" :lat-lng="customerLatLng">
-            <l-icon :icon-size="[36, 36]" :icon-anchor="[18, 36]">
+            <l-icon :icon-size="[36, 42]" :icon-anchor="[18, 41]">
               <template #default>
-                <div class="custom-marker customer-marker">🏠</div>
+                <div class="marker-container customer-marker">
+                  <div class="teardrop-pin" style="--pin-bg: #ef4444;">
+                    <span class="pin-icon">👤</span>
+                  </div>
+                </div>
               </template>
             </l-icon>
             <l-popup>
@@ -49,10 +57,12 @@
 
           <!-- Shipper Marker (ASSIGNED/DELIVERING/SUCCESS) -->
           <l-marker v-if="shipperLatLng" :lat-lng="shipperLatLng">
-            <l-icon :icon-size="[40, 40]" :icon-anchor="[20, 20]">
+            <l-icon :icon-size="[36, 42]" :icon-anchor="[18, 41]">
               <template #default>
-                <div class="custom-marker shipper-marker" :class="{ success: order.status === 'SUCCESS' }">
-                  🛵
+                <div class="marker-container shipper-marker-wrap" :class="{ success: order.status === 'SUCCESS' }">
+                  <div class="teardrop-pin" style="--pin-bg: #3b82f6;">
+                    <span class="pin-icon">🛵</span>
+                  </div>
                 </div>
               </template>
             </l-icon>
@@ -194,10 +204,19 @@ import { Phone } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { trackingApi } from '@/api/trackingApi'
 import { getVehicleLabel, formatDate } from '@/utils/helpers'
+import { useThemeStore } from '@/stores/themeStore'
 import type { Order, TrajectoryPoint } from '@/types'
 
 // Lazy import leaflet components
 import { LMap, LTileLayer, LMarker, LIcon, LPopup, LPolyline, LCircle } from '@vue-leaflet/vue-leaflet'
+
+const themeStore = useThemeStore()
+
+const mapTileUrl = computed(() => {
+  return themeStore.theme === 'light'
+    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+})
 
 const props = defineProps<{ order: Order }>()
 
@@ -401,19 +420,45 @@ onBeforeUnmount(() => {
 }
 
 /* Custom Markers */
-.custom-marker {
-  font-size: 24px;
-  text-align: center;
-  line-height: 36px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+.marker-container {
+  width: 36px;
+  height: 42px;
+  position: relative;
 }
 
-.shipper-marker {
-  font-size: 28px;
+.teardrop-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-bg, #3b82f6);
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: -2px 2px 6px rgba(0, 0, 0, 0.3);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+.pin-icon {
+  transform: rotate(45deg);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shipper-marker-wrap {
+  width: 36px;
+  height: 42px;
+  position: relative;
   animation: shipper-bounce 2s ease-in-out infinite;
 }
 
-.shipper-marker.success {
+.shipper-marker-wrap.success {
   animation: none;
 }
 

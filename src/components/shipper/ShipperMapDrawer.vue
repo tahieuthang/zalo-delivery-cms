@@ -29,14 +29,18 @@
           style="height: 100%; width: 100%; border-radius: 8px"
         >
           <l-tile-layer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            :url="mapTileUrl"
             attribution="&copy; CartoDB"
           />
 
           <l-marker :lat-lng="[lat, lng]">
-            <l-icon :icon-size="[40, 40]" :icon-anchor="[20, 20]">
+            <l-icon :icon-size="[36, 42]" :icon-anchor="[18, 41]">
               <template #default>
-                <div class="custom-marker shipper-marker">🛵</div>
+                <div class="marker-container shipper-marker-wrap">
+                  <div class="teardrop-pin" style="--pin-bg: #3b82f6;">
+                    <span class="pin-icon">🛵</span>
+                  </div>
+                </div>
               </template>
             </l-icon>
             <l-popup>
@@ -75,6 +79,7 @@
 import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import { shipperApi } from '@/api/shipperApi'
 import { getVehicleLabel, formatCurrency, parseShipperName } from '@/utils/helpers'
+import { useThemeStore } from '@/stores/themeStore'
 import type { Shipper } from '@/types'
 
 // Lazy import Leaflet
@@ -93,6 +98,13 @@ const drawerVisible = computed({
 })
 
 const mapReady = ref(false)
+const themeStore = useThemeStore()
+
+const mapTileUrl = computed(() => {
+  return themeStore.theme === 'light'
+    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+})
 const loading = ref(false)
 const error = ref<string | null>(null)
 const lat = ref<number | null>(null)
@@ -170,11 +182,42 @@ onBeforeUnmount(() => {
   margin-bottom: 8px;
 }
 
-.custom-marker {
-  font-size: 28px;
-  text-align: center;
-  line-height: 40px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+/* Custom Markers */
+.marker-container {
+  width: 36px;
+  height: 42px;
+  position: relative;
+}
+
+.teardrop-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-bg, #3b82f6);
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: -2px 2px 6px rgba(0, 0, 0, 0.3);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+.pin-icon {
+  transform: rotate(45deg);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shipper-marker-wrap {
+  width: 36px;
+  height: 42px;
+  position: relative;
   animation: shipper-bounce 2s ease-in-out infinite;
 }
 
