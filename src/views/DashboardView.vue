@@ -188,8 +188,14 @@ onMounted(async () => {
       revenueApi.getDaily(),
       orderApi.getOrders({ limit: 5 }),
     ])
-    if (summaryRes.status === 'fulfilled') summary.value = summaryRes.value.data as any
-    if (revenueRes.status === 'fulfilled') dailyRevenue.value = (revenueRes.value.data as any) || []
+    if (summaryRes.status === 'fulfilled') {
+      const d = summaryRes.value.data as any
+      summary.value = d?.data || d
+    }
+    if (revenueRes.status === 'fulfilled') {
+      const d = revenueRes.value.data as any
+      dailyRevenue.value = d?.data || d || []
+    }
     if (ordersRes.status === 'fulfilled') {
       const res = ordersRes.value.data as any
       recentOrders.value = res?.data || res || []

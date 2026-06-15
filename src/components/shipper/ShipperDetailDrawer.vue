@@ -191,7 +191,7 @@ async function fetchEarnings() {
   loadingRevenue.value = true
   try {
     const res = await revenueApi.getShipperEarnings(props.shipper.id)
-    earnings.value = res.data as any
+    earnings.value = res.data?.data || res.data
   } catch (err) {
     console.error('Lỗi khi lấy doanh thu shipper:', err)
   } finally {

@@ -231,7 +231,7 @@ const chartOption = computed(() => ({
 async function fetchSummary() {
   try {
     const res = await revenueApi.getSummary()
-    summary.value = res.data as any
+    summary.value = res.data?.data || res.data
   } catch { /* silent */ }
 }
 
@@ -243,7 +243,7 @@ async function fetchDaily() {
       params.to = dateRange.value[1]
     }
     const res = await revenueApi.getDaily(params)
-    dailyData.value = (res.data as any) || []
+    dailyData.value = res.data?.data || res.data || []
   } catch { /* silent */ }
 }
 
@@ -251,7 +251,7 @@ async function fetchLag() {
   lagLoading.value = true
   try {
     const res = await revenueApi.getLag()
-    lagData.value = res.data as any
+    lagData.value = res.data?.data || res.data
   } catch (err) {
     console.error('Lỗi khi lấy lag Revenue:', err)
   } finally {

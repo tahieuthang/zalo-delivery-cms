@@ -103,7 +103,8 @@ async function fetchLocation() {
   if (!props.shipper) return
   try {
     const res = await shipperApi.getLocation(props.shipper.id)
-    const data = res.data as any
+    const raw = res.data as any
+    const data = raw?.data || raw
     if (data && data.lat && data.lng) {
       lat.value = data.lat
       lng.value = data.lng

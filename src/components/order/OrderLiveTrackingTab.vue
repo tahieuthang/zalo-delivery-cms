@@ -307,7 +307,8 @@ async function fetchLiveTracking() {
   if (!isLiveTracking.value) return
   try {
     const res = await trackingApi.getLiveTracking(props.order.id)
-    const data = res.data as any
+    const raw = res.data as any
+    const data = raw?.data || raw
     if (data) {
       shipperLat.value = data.shipperLat
       shipperLng.value = data.shipperLng
@@ -321,7 +322,8 @@ async function fetchLiveTracking() {
 async function fetchTrajectory() {
   try {
     const res = await trackingApi.getTrajectory(props.order.id)
-    trajectoryPoints.value = (res.data as any) || []
+    const raw = res.data as any
+    trajectoryPoints.value = raw?.data || raw || []
   } catch {
     // silent
   }

@@ -48,168 +48,103 @@
       <!-- Actions Divider -->
       <div class="panel-divider" />
 
-      <!-- Manual Dispatch and Shipper Simulator Form -->
-      <div class="operations-forms">
-        <el-tabs v-model="activeOpTab" class="ops-tabs" size="small">
-          <!-- Tab 1: Dispatch Trigger -->
-          <el-tab-pane label="⚡ Kích hoạt Điều phối" name="trigger">
-            <div class="ops-form">
-              <div class="form-desc">
-                Mô phỏng sự kiện `order.created` trên Kafka để bắt đầu quy trình tìm tài xế.
+      <!-- Active Orders Dispatching Monitor -->
+      <div class="active-dispatch-monitor">
+        <div class="section-header">
+          <div class="section-subtitle">📡 Theo dõi & Mock Điều phối Đơn hàng</div>
+          <el-button link type="primary" size="small" @click="fetchActiveOrdersList">
+            Làm mới
+          </el-button>
+        </div>
+
+        <el-table :data="localActiveOrders" size="small" style="width: 100%" max-height="300">
+          <el-table-column label="Mã đơn" width="100">
+            <template #default="{ row }">
+              <span class="order-id" :title="row.id">{{ truncateId(row.id, 8) }}</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="status" label="Trạng thái" width="140">
+            <template #default="{ row }">
+              <span class="status-badge" :class="getStatusClass(row.status)">
+                {{ getStatusLabel(row.status) }}
+              </span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="Shipper Đề xuất" min-width="150">
+            <template #default="{ row }">
+              <div v-if="getProposedShipper(row)" class="proposed-shipper-cell">
+                <span class="shipper-name">🛵 {{ parseShipperName(getProposedShipper(row)?.name).name }}</span>
+                <span class="shipper-phone text-muted">({{ getProposedShipper(row)?.phone }})</span>
               </div>
-              <el-form :model="triggerForm" size="small" label-position="top">
-                <el-form-item label="Đơn hàng">
-                  <el-select
-                    v-model="triggerForm.orderId"
-                    placeholder="Chọn đơn hàng hoạt động"
-                    style="width: 100%"
-                    filterable
-                    @change="handleOrderSelect"
-                  >
-                    <el-option
-                      v-for="order in activeOrders"
-                      :key="order.id"
-                      :label="`${order.id.slice(0, 10)}... (${getStatusLabel(order.status)})`"
-                      :value="order.id"
-                    />
-                  </el-select>
-                </el-form-item>
+              <span v-else-if="row.status === 'PENDING' || row.status === 'WAITING_ACCEPTANCE'" class="text-muted text-xs">🔍 Đang quét tài xế...</span>
+              <span v-else-if="row.status === 'NO_SHIPPER'" class="text-muted text-xs">❌ Không tìm thấy shipper</span>
+              <span v-else class="text-muted">—</span>
+            </template>
+          </el-table-column>
 
-                <div class="coords-row">
-                  <el-form-item label="Vĩ độ lấy (Lat)">
-                    <el-input-number
-                      v-model="triggerForm.pickupLat"
-                      :precision="6"
-                      :step="0.001"
-                      controls-position="right"
-                      style="width: 100%"
-                    />
-                  </el-form-item>
-                  <el-form-item label="Kinh độ lấy (Lng)">
-                    <el-input-number
-                      v-model="triggerForm.pickupLng"
-                      :precision="6"
-                      :step="0.001"
-                      controls-position="right"
-                      style="width: 100%"
-                    />
-                  </el-form-item>
-                </div>
-
+          <el-table-column label="Hành động" width="100" align="center" fixed="right">
+            <template #default="{ row }">
+              <div v-if="hasPendingOffer(row)" class="action-buttons-wrap">
+                <el-button
+                  type="success"
+                  circle
+                  size="small"
+                  :icon="Check"
+                  title="Chấp nhận"
+                  @click="handleOfferAction(row, 'accept')"
+                  :loading="actionLoadingId === row.id && activeAction === 'accept'"
+                  :disabled="actionLoadingId === row.id && activeAction !== 'accept'"
+                />
+                <el-button
+                  type="danger"
+                  circle
+                  size="small"
+                  :icon="Close"
+                  title="Từ chối"
+                  @click="handleOfferAction(row, 'reject')"
+                  :loading="actionLoadingId === row.id && activeAction === 'reject'"
+                  :disabled="actionLoadingId === row.id && activeAction !== 'reject'"
+                />
+              </div>
+              <div v-else-if="row.status === 'NO_SHIPPER'">
                 <el-button
                   type="primary"
                   size="small"
-                  style="width: 100%; margin-top: 4px;"
-                  :loading="submittingTrigger"
-                  @click="handleTriggerDispatch"
+                  link
+                  @click="handleReTrigger(row)"
+                  :loading="actionLoadingId === row.id && activeAction === 'retrigger'"
                 >
-                  Gửi sự kiện Dispatch
+                  ⚡ Tìm lại
                 </el-button>
-              </el-form>
-            </div>
-          </el-tab-pane>
-
-          <!-- Tab 2: Shipper Response -->
-          <el-tab-pane label="🛵 Phản hồi Shipper" name="respond">
-            <div class="ops-form">
-              <div class="form-desc">
-                Mô phỏng tài xế phản hồi Chấp nhận/Từ chối Offer điều phối gửi qua Zalo.
               </div>
-              <el-form :model="respondForm" size="small" label-position="top">
-                <el-form-item label="Đơn hàng">
-                  <el-select
-                    v-model="respondForm.orderId"
-                    placeholder="Chọn đơn hàng"
-                    style="width: 100%"
-                    filterable
-                  >
-                    <el-option
-                      v-for="order in activeOrders"
-                      :key="order.id"
-                      :label="`${order.id.slice(0, 10)}...`"
-                      :value="order.id"
-                    />
-                  </el-select>
-                </el-form-item>
-
-                <el-form-item label="Shipper">
-                  <el-select
-                    v-model="respondForm.shipperId"
-                    placeholder="Chọn shipper nhận offer"
-                    style="width: 100%"
-                    filterable
-                  >
-                    <el-option
-                      v-for="shipper in activeShippers"
-                      :key="shipper.id"
-                      :label="parseShipperName(shipper.name).name"
-                      :value="shipper.id"
-                    />
-                  </el-select>
-                </el-form-item>
-
-                <el-form-item label="Phản hồi">
-                  <el-radio-group v-model="respondForm.action" style="width: 100%">
-                    <el-radio-button value="accept" label="accept">Chấp nhận ✅</el-radio-button>
-                    <el-radio-button value="reject" label="reject">Từ chối ❌</el-radio-button>
-                  </el-radio-group>
-                </el-form-item>
-
-                <el-button
-                  type="success"
-                  size="small"
-                  style="width: 100%; margin-top: 4px;"
-                  :loading="submittingRespond"
-                  @click="handleShipperRespond"
-                >
-                  Gửi phản hồi giả lập
-                </el-button>
-              </el-form>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
+              <span v-else class="text-muted">—</span>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Loading, Check, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { dispatcherApi } from '@/api/dispatcherApi'
-import { shipperApi } from '@/api/shipperApi'
-import { getStatusLabel, parseShipperName } from '@/utils/helpers'
-import type { DispatcherStatus, DispatcherLag, Order, Shipper } from '@/types'
-
-const props = defineProps<{
-  orders: Order[]
-}>()
+import { orderApi } from '@/api/orderApi'
+import { getStatusLabel, getStatusClass, parseShipperName, truncateId } from '@/utils/helpers'
+import type { DispatcherStatus, DispatcherLag, Order } from '@/types'
 
 const status = ref<DispatcherStatus | null>(null)
 const lag = ref<DispatcherLag | null>(null)
 const loading = ref(false)
+const actionLoadingId = ref<string | null>(null)
+const activeAction = ref<'accept' | 'reject' | 'retrigger' | null>(null)
 
-const activeOpTab = ref('trigger')
-const activeShippers = ref<Shipper[]>([])
-const submittingTrigger = ref(false)
-const submittingRespond = ref(false)
-
-const triggerForm = reactive({
-  orderId: '',
-  pickupLat: 20.953503,
-  pickupLng: 105.837839,
-})
-
-const respondForm = reactive({
-  orderId: '',
-  shipperId: '',
-  action: 'accept' as 'accept' | 'reject',
-})
-
-const activeOrders = computed(() => {
-  return props.orders.filter(o => ['PENDING', 'WAITING_ACCEPTANCE', 'ASSIGNED', 'NO_SHIPPER'].includes(o.status))
-})
+const localActiveOrders = ref<Order[]>([])
+const pollers: Record<string, ReturnType<typeof setInterval>> = {}
 
 const lagPartitions = computed(() => {
   return lag.value?.partitions || []
@@ -222,27 +157,20 @@ function getLagClass(lagVal: string | number) {
   return 'lag-high'
 }
 
-function handleOrderSelect(orderId: string) {
-  const found = props.orders.find(o => o.id === orderId)
-  if (found && found.pickupLat && found.pickupLng) {
-    triggerForm.pickupLat = found.pickupLat
-    triggerForm.pickupLng = found.pickupLng
-  }
-}
-
 async function fetchDispatcherData() {
   loading.value = true
   try {
-    const [statusRes, lagRes, shippersRes] = await Promise.allSettled([
+    const [statusRes, lagRes] = await Promise.allSettled([
       dispatcherApi.getStatus(),
       dispatcherApi.getLag(),
-      shipperApi.getShippers(),
     ])
-    if (statusRes.status === 'fulfilled') status.value = statusRes.value.data as any
-    if (lagRes.status === 'fulfilled') lag.value = lagRes.value.data as any
-    if (shippersRes.status === 'fulfilled') {
-      const data = shippersRes.value.data as any
-      activeShippers.value = data?.data || data || []
+    if (statusRes.status === 'fulfilled') {
+      const d = statusRes.value.data as any
+      status.value = d?.data || d
+    }
+    if (lagRes.status === 'fulfilled') {
+      const d = lagRes.value.data as any
+      lag.value = d?.data || d
     }
   } catch (e) {
     console.error('Fetch dispatcher statistics failed', e)
@@ -251,53 +179,152 @@ async function fetchDispatcherData() {
   }
 }
 
-async function handleTriggerDispatch() {
-  if (!triggerForm.orderId) {
-    ElMessage.warning('Vui lòng chọn đơn hàng')
-    return
-  }
-  submittingTrigger.value = true
+async function fetchActiveOrdersList() {
   try {
-    await dispatcherApi.trigger({
-      orderId: triggerForm.orderId,
-      pickupLat: triggerForm.pickupLat,
-      pickupLng: triggerForm.pickupLng,
+    const res = await orderApi.getOrders({ status: 'PENDING,WAITING_ACCEPTANCE,NO_SHIPPER', limit: 50 })
+    const data = res.data as any
+    const fetchedList: Order[] = data?.data || data || []
+
+    fetchedList.forEach((order) => {
+      const existingIdx = localActiveOrders.value.findIndex(o => o.id === order.id)
+      if (existingIdx === -1) {
+        localActiveOrders.value.push(order)
+        startPollingOrder(order.id)
+      } else {
+        const existing = localActiveOrders.value[existingIdx]
+        if (existing.status !== order.status) {
+          existing.status = order.status
+          if (isTerminalStatus(order.status)) {
+            stopPollingOrder(order.id)
+          } else {
+            startPollingOrder(order.id)
+          }
+        }
+      }
     })
-    ElMessage.success('Kích hoạt điều phối Kafka thành công')
-    // Reset form
-    triggerForm.orderId = ''
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || 'Lỗi khi kích hoạt điều phối')
-  } finally {
-    submittingTrigger.value = false
+
+    localActiveOrders.value = localActiveOrders.value.filter(o => {
+      const stillActive = fetchedList.some(f => f.id === o.id)
+      if (!stillActive && isTerminalStatus(o.status)) {
+        stopPollingOrder(o.id)
+        return false
+      }
+      return true
+    })
+  } catch (err) {
+    console.error('Error fetching active orders list:', err)
   }
 }
 
-async function handleShipperRespond() {
-  if (!respondForm.orderId || !respondForm.shipperId) {
-    ElMessage.warning('Vui lòng chọn đơn hàng và shipper')
-    return
+function isTerminalStatus(status: string): boolean {
+  return !['PENDING', 'WAITING_ACCEPTANCE'].includes(status)
+}
+
+function startPollingOrder(orderId: string) {
+  if (pollers[orderId]) return
+  pollOrderDetails(orderId)
+  pollers[orderId] = setInterval(() => {
+    pollOrderDetails(orderId)
+  }, 2000)
+}
+
+function stopPollingOrder(orderId: string) {
+  if (pollers[orderId]) {
+    clearInterval(pollers[orderId])
+    delete pollers[orderId]
   }
-  submittingRespond.value = true
+}
+
+async function pollOrderDetails(orderId: string) {
+  try {
+    const res = await orderApi.getOrderById(orderId)
+    const raw = res.data as any
+    const detailedOrder = raw?.data || raw
+    const idx = localActiveOrders.value.findIndex(o => o.id === orderId)
+    if (idx !== -1) {
+      localActiveOrders.value[idx] = {
+        ...localActiveOrders.value[idx],
+        ...detailedOrder,
+      }
+      if (isTerminalStatus(detailedOrder.status)) {
+        stopPollingOrder(orderId)
+      }
+    }
+  } catch (err) {
+    console.error(`Error polling details for order ${orderId}:`, err)
+  }
+}
+
+function getProposedShipper(order: Order) {
+  if (!order.offerLogs || order.offerLogs.length === 0) return null
+  const sortedLogs = [...order.offerLogs].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+  const latestLog = sortedLogs[0]
+  if (latestLog && latestLog.status === 'PENDING') {
+    return latestLog.shipper || { id: latestLog.shipperId, name: 'Tài xế giả lập', phone: '—' }
+  }
+  return null
+}
+
+function hasPendingOffer(order: Order): boolean {
+  return getProposedShipper(order) !== null
+}
+
+async function handleOfferAction(order: Order, action: 'accept' | 'reject') {
+  const proposed = getProposedShipper(order)
+  if (!proposed) return
+
+  actionLoadingId.value = order.id
+  activeAction.value = action
   try {
     await dispatcherApi.respond({
-      orderId: respondForm.orderId,
-      shipperId: respondForm.shipperId,
-      action: respondForm.action,
+      orderId: order.id,
+      shipperId: proposed.id,
+      action: action,
     })
-    ElMessage.success(`Gửi phản hồi giả lập (${respondForm.action}) thành công`)
-    // Reset form
-    respondForm.orderId = ''
-    respondForm.shipperId = ''
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || 'Lỗi khi gửi phản hồi')
+    ElMessage.success(`Đã gửi phản hồi giả lập: ${action === 'accept' ? 'Chấp nhận' : 'Từ chối'}`)
+    await pollOrderDetails(order.id)
+  } catch (err: any) {
+    ElMessage.error(err.response?.data?.message || 'Lỗi khi gửi phản hồi')
   } finally {
-    submittingRespond.value = false
+    actionLoadingId.value = null
+    activeAction.value = null
   }
 }
 
-onMounted(() => {
-  fetchDispatcherData()
+async function handleReTrigger(order: Order) {
+  actionLoadingId.value = order.id
+  activeAction.value = 'retrigger'
+  try {
+    await dispatcherApi.trigger({
+      orderId: order.id,
+      pickupLat: order.pickupLat || 20.953503,
+      pickupLng: order.pickupLng || 105.837839,
+    })
+    ElMessage.success('Đã kích hoạt lại quy trình điều phối')
+    startPollingOrder(order.id)
+  } catch (err: any) {
+    ElMessage.error(err.response?.data?.message || 'Lỗi khi kích hoạt lại điều phối')
+  } finally {
+    actionLoadingId.value = null
+    activeAction.value = null
+  }
+}
+
+let listInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(async () => {
+  await fetchDispatcherData()
+  await fetchActiveOrdersList()
+  listInterval = setInterval(fetchActiveOrdersList, 10000)
+})
+
+onBeforeUnmount(() => {
+  if (listInterval) clearInterval(listInterval)
+  Object.keys(pollers).forEach(orderId => {
+    clearInterval(pollers[orderId])
+  })
 })
 </script>
 
@@ -462,46 +489,42 @@ onMounted(() => {
   background: var(--border-color);
 }
 
-.ops-tabs :deep(.el-tabs__item) {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.ops-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--color-primary-light);
-}
-
-.ops-form {
+.active-dispatch-monitor {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 12px;
 }
 
-.form-desc {
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.proposed-shipper-cell {
+  display: flex;
+  flex-direction: column;
   font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin-bottom: 6px;
 }
 
-.coords-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-:deep(.el-form-item) {
-  margin-bottom: 8px;
-}
-
-:deep(.el-form-item__label) {
-  font-size: 11px;
+.proposed-shipper-cell .shipper-name {
   font-weight: 600;
-  color: var(--text-muted) !important;
-  margin-bottom: 2px !important;
-  line-height: 1.2 !important;
+  color: var(--text-secondary);
+}
+
+.proposed-shipper-cell .shipper-phone {
+  font-size: 10px;
+}
+
+.action-buttons-wrap {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.text-xs {
+  font-size: 11px;
 }
 
 .mono {
