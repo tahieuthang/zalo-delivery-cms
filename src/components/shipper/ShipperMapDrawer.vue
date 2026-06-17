@@ -117,9 +117,10 @@ async function fetchLocation() {
     const res = await shipperApi.getLocation(props.shipper.id)
     const raw = res.data as any
     const data = raw?.data || raw
-    if (data && data.lat && data.lng) {
-      lat.value = data.lat
-      lng.value = data.lng
+    const location = data?.location || data
+    if (location && location.lat && location.lng) {
+      lat.value = parseFloat(location.lat)
+      lng.value = parseFloat(location.lng)
       error.value = null
     } else {
       error.value = 'Không có thông tin tọa độ trong phản hồi API'
