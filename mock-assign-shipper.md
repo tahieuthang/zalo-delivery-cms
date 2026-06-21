@@ -1,4 +1,4 @@
-### PHẦN HÀNH: TÍCH HỢP TÍNH NĂNG MOCK ĐIỀU PHỐI & PHẢN HỒI SHIPPER TRÊN CMS DASHBOARD (VUE 3 + ELEMENT PLUS)
+### PHẦN HÀNH: TÍCH HỢP TÍNH NĂNG MOCK ĐIỀU PHỐI & PHẢN HỒI SHIPPER TRÊN CMS DASHBOARD
 
 #### 1. Bối cảnh & Mục tiêu
 Chúng ta cần phát triển một bảng điều khiển giám sát điều phối ("Dispatcher Panel") trên giao diện CMS Dashboard. Bảng điều khiển này có nhiệm vụ theo dõi danh sách đơn hàng đang quét tìm tài xế (real-time bằng polling) và cung cấp các nút giả lập hành động của shipper (Chấp nhận / Từ chối đơn hàng) để phục vụ kiểm thử nhanh mà không cần thao tác qua ứng dụng Zalo thật.

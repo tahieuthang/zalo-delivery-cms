@@ -12,6 +12,8 @@ export type OrderStatus =
 export interface Order {
   id: string
   customerId: string
+  customerName?: string | null
+  customerPhone?: string | null
   pickupAddress: string
   pickupLat: number | null
   pickupLng: number | null
@@ -30,6 +32,7 @@ export interface Order {
   offerLogs?: OrderOfferLog[]
   trajectory?: TrajectoryPoint[]
   _count?: { trajectory: number }
+  items?: OrderItem[] | null
 }
 
 export interface TrajectoryPoint {

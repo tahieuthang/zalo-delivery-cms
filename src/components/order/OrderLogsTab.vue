@@ -125,10 +125,10 @@ const trajectoryCount = computed(() => props.order.trajectory?.length || 0)
 
 function getOfferStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    PENDING: '⏳ Đang chờ',
-    ACCEPTED: '✅ Đã nhận',
-    REJECTED: '❌ Từ chối',
-    TIMEOUT: '⏰ Hết hạn',
+    PENDING: 'Đang chờ',
+    ACCEPTED: 'Đã nhận',
+    REJECTED: 'Từ chối',
+    TIMEOUT: 'Hết hạn',
   }
   return labels[status] || status
 }

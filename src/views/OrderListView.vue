@@ -63,9 +63,13 @@
             <span class="order-id-cell">{{ truncateId(row.id, 12) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="customerId" label="Khách hàng" width="140">
+        <el-table-column prop="customerId" label="Khách hàng" width="160">
           <template #default="{ row }">
-            <span>{{ truncateId(row.customerId, 10) }}</span>
+            <div style="display: flex; flex-direction: column; line-height: 1.3;">
+              <span style="font-weight: 500;">{{ row.customerName || 'Khách hàng Zalo' }}</span>
+              <span v-if="row.customerPhone" class="text-muted" style="font-size: 11px;">{{ row.customerPhone }}</span>
+              <span v-else class="text-muted" style="font-size: 11px;">ID: {{ truncateId(row.customerId, 8) }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="pickupAddress" label="Địa chỉ lấy" show-overflow-tooltip min-width="200" />

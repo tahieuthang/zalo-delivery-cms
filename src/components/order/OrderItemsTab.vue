@@ -17,24 +17,29 @@
     <!-- Items Table -->
     <div class="items-section">
       <h4 class="section-title">Danh sách món</h4>
-      <el-table :data="mockItems" style="width: 100%" size="small">
+      <el-table :data="displayItems" style="width: 100%" size="small">
         <el-table-column type="index" label="#" width="50" />
-        <el-table-column prop="name" label="Tên món" min-width="200" />
+        <el-table-column prop="name" label="Tên món / Sản phẩm" min-width="200" />
         <el-table-column prop="quantity" label="SL" width="80" align="center" />
-        <el-table-column prop="unitPrice" label="Đơn giá" width="130" align="right">
+        <el-table-column v-if="hasPricing" prop="unitPrice" label="Đơn giá" width="130" align="right">
           <template #default="{ row }">
             {{ formatCurrency(row.unitPrice) }}
           </template>
         </el-table-column>
-        <el-table-column prop="total" label="Thành tiền" width="140" align="right">
+        <el-table-column v-if="hasPricing" prop="total" label="Thành tiền" width="140" align="right">
           <template #default="{ row }">
             <strong>{{ formatCurrency(row.total) }}</strong>
+          </template>
+        </el-table-column>
+        <el-table-column prop="note" label="Ghi chú món" min-width="150">
+          <template #default="{ row }">
+            <span :class="{ 'text-muted italic': !row.note }">{{ row.note || '—' }}</span>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- Bill Summary -->
-      <div class="bill-summary">
+      <div v-if="hasPricing" class="bill-summary">
         <div class="bill-row">
           <span>Tạm tính</span>
           <span>{{ formatCurrency(subtotal) }}</span>
@@ -52,17 +57,22 @@
           <span>{{ formatCurrency(totalBill) }}</span>
         </div>
       </div>
+
+      <!-- Empty State if no items and not mock -->
+      <div v-if="displayItems.length === 0" class="empty-items-state">
+        <el-empty description="Không có danh sách món ăn/sản phẩm" :image-size="60" />
+      </div>
     </div>
 
     <!-- Note -->
     <div v-if="order.note" class="note-section">
-      <h4 class="section-title">📝 Ghi chú khách hàng</h4>
+      <h4 class="section-title"> Ghi chú khách hàng</h4>
       <div class="note-content">{{ order.note }}</div>
     </div>
 
     <!-- Revenue Records -->
     <div v-if="order.revenues && order.revenues.length" class="revenue-section">
-      <h4 class="section-title">💰 Lịch sử thanh toán</h4>
+      <h4 class="section-title"> Lịch sử thanh toán</h4>
       <el-table :data="order.revenues" style="width: 100%" size="small">
         <el-table-column prop="id" label="ID" width="140">
           <template #default="{ row }">
@@ -84,11 +94,11 @@
     </div>
 
     <!-- API Notice -->
-    <div class="api-notice">
+    <div v-if="isMock" class="api-notice">
       <el-alert
         title="Lưu ý: Danh sách món ăn đang sử dụng dữ liệu mẫu"
-        description="API backend chưa có endpoint trả về order items. Cần bổ sung GET /api/orders/{id}/items để hiển thị dữ liệu thực."
-        type="info"
+        description="Đơn hàng demo chưa lưu danh sách sản phẩm thực tế. Đang hiển thị danh sách sản phẩm mẫu cho mục đích giao diện."
+        type="warning"
         :closable="true"
         show-icon
       />
@@ -103,7 +113,7 @@ import type { Order, OrderItem } from '@/types'
 
 const props = defineProps<{ order: Order }>()
 
-// Mock data for items (API chưa có)
+// Mock data for items fallback
 const mockItems: OrderItem[] = [
   { id: '1', name: 'Phở Bò Tái Nạm', quantity: 2, unitPrice: 55000, total: 110000 },
   { id: '2', name: 'Gỏi Cuốn Tôm Thịt', quantity: 1, unitPrice: 35000, total: 35000 },
@@ -111,7 +121,33 @@ const mockItems: OrderItem[] = [
   { id: '4', name: 'Trà Đào Cam Sả', quantity: 2, unitPrice: 29000, total: 58000 },
 ]
 
-const subtotal = computed(() => mockItems.reduce((acc, item) => acc + item.total, 0))
+const displayItems = computed(() => {
+  if (props.order.items && Array.isArray(props.order.items) && props.order.items.length > 0) {
+    return props.order.items.map((item: any, idx: number) => ({
+      id: item.id || String(idx + 1),
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice || 0,
+      total: item.total || (item.unitPrice ? item.unitPrice * item.quantity : 0),
+      note: item.note || ''
+    }))
+  }
+
+  // Fallback for real demo order to show rich visual preview
+  if (props.order.id === 'order-real-demo') {
+    return mockItems
+  }
+
+  return []
+})
+
+const isMock = computed(() => {
+  return props.order.id === 'order-real-demo' && (!props.order.items || props.order.items.length === 0)
+})
+
+const hasPricing = computed(() => displayItems.value.some((item) => item.unitPrice > 0))
+
+const subtotal = computed(() => displayItems.value.reduce((acc, item) => acc + item.total, 0))
 const deliveryFee = 15000
 const vat = computed(() => Math.round(subtotal.value * 0.1))
 const totalBill = computed(() => subtotal.value + deliveryFee + vat.value)

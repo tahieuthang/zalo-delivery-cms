@@ -173,15 +173,22 @@
         <div class="info-card-body">
           <div class="person-info">
             <div class="person-avatar customer-avatar">
-              {{ order.customerId.charAt(0).toUpperCase() }}
+              {{ (order.customerName || order.customerId || 'K').charAt(0).toUpperCase() }}
             </div>
             <div class="person-details">
-              <div class="person-name">{{ order.customerId }}</div>
-              <div class="person-phone address-text">{{ order.deliveryAddress }}</div>
+              <div class="person-name" :title="order.customerId">
+                {{ order.customerName || 'Khách hàng Zalo' }}
+              </div>
+              <div class="person-phone" v-if="order.customerPhone">
+                📞 {{ order.customerPhone }}
+              </div>
+              <div class="person-meta address-text">
+                📍 {{ order.deliveryAddress }}
+              </div>
             </div>
           </div>
-          <div class="action-buttons">
-            <el-button type="success" size="small" round>
+          <div class="action-buttons" v-if="order.customerPhone">
+            <el-button type="success" size="small" round :href="'tel:' + order.customerPhone" tag="a">
               <el-icon><Phone /></el-icon> Gọi
             </el-button>
           </div>
